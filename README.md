@@ -22,11 +22,15 @@ away with nothing left behind; a meeting sharing the window never sees them. Rec
 
 ### Presenting in a meeting
 
-- Share the **Stage** window (not the whole screen) in Zoom, Meet or Teams.
+- Share the **Stage** window (not the whole screen) in Zoom, Meet or Teams. With
+  Stage Manager on, Stage's window stays beside the app in front instead of
+  shrinking into the side strip, so the meeting can list and share it.
 - The controls and pointer fade out after a moment; move the pointer over the
   window to bring them back. The window buttons stay hidden while the phone is
   showing (use ⌘W to close, ⌘M to minimize, ⌃⌘F for full screen).
-- **View › Float on Top** (⌥⌘T) keeps it above your other windows.
+- **View › Float on Top** (⌥⌘T) keeps it above your other windows. Browsers
+  such as Chrome and Arc can't share a floating window, so leave it off to
+  present Stage in Google Meet.
 - Full screen (⌃⌘F) shows the picture on black.
 - While recording, a red timer sits in the menu bar, outside the shared
   window. Click it to stop.

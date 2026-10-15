@@ -30,6 +30,9 @@ struct SettingsView: View {
 
             Section("Presenting") {
                 Toggle("Float on top of other windows", isOn: $prefs.floatsOnTop)
+                Text("Browsers such as Chrome and Arc can't share a floating window. Turn this off to present Stage in Google Meet.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

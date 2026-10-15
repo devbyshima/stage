@@ -62,7 +62,7 @@ final class ControlsPanel {
         // Clicks work without taking the keyboard from the window, where
         // Space starts and stops recording.
         panel.becomesKeyOnlyIfNeeded = true
-        panel.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle]
+        panel.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle, .canJoinAllApplications]
         panel.contentView = NSHostingView(rootView: content)
     }
 

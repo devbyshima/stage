@@ -112,6 +112,11 @@ struct StageView: View {
     private func configureWindow() {
         guard let window else { return }
         window.isMovableByWindowBackground = true
+        // With Stage Manager on, a window of a background app shrinks into
+        // the side strip, where a browser sharing a window (Google Meet) skips
+        // it or captures the thumbnail. This keeps Stage beside the app in
+        // front, full size, so it can be presented from there.
+        window.collectionBehavior.insert(.canJoinAllApplications)
         window.backgroundColor = .black
         updateWindowLevel()
         updateWindowButtons()
