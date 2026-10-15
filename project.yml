@@ -1,0 +1,84 @@
+name: Stage
+options:
+  bundleIdPrefix: com.fulltimestudio
+  deploymentTarget:
+    macOS: "27.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: 7WHQR6L96K
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+schemes:
+  Stage:
+    build:
+      targets:
+        Stage: all
+        StageTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - StageTests
+    profile:
+      config: Release
+    archive:
+      config: Release
+
+targets:
+  Stage:
+    type: application
+    platform: macOS
+    sources:
+      - path: Stage
+    entitlements:
+      path: Stage/App/Stage.entitlements
+      properties:
+        # Hardened runtime needs these to open the iPhone screen (a camera to
+        # macOS) and microphones.
+        com.apple.security.device.camera: true
+        com.apple.security.device.audio-input: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fulltimestudio.stage
+        PRODUCT_NAME: Stage
+        ENABLE_PREVIEWS: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        COMBINE_HIDPI_IMAGES: YES
+    info:
+      path: Stage/App/Info.plist
+      properties:
+        CFBundleDisplayName: Stage
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.video
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        # Gochi Hand (Stage/Resources/Fonts), the empty screen's and the
+        # wordmark's typeface, sits flat in Contents/Resources.
+        ATSApplicationFontsPath: "."
+        NSCameraUsageDescription: Stage shows and records your iPhone screen. macOS treats a connected iPhone screen as a camera, so Stage needs camera access to see it.
+        NSMicrophoneUsageDescription: Stage records your iPhone's sound, or your voice from a microphone you choose.
+
+  StageTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: StageTests
+    dependencies:
+      - target: Stage
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fulltimestudio.stage.tests
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Stage.app/Contents/MacOS/Stage
+        BUNDLE_LOADER: $(TEST_HOST)
+        GENERATE_INFOPLIST_FILE: YES

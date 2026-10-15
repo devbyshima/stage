@@ -1,0 +1,43 @@
+{
+  "fill-specializations" : [
+    { "value" : { "solid" : "srgb:0.00000,0.85098,0.34118,1.00000" } },
+    { "appearance" : "dark", "value" : "system-dark" }
+  ],
+  "groups" : [
+    {
+      "name" : "Mark",
+      "layers" : [
+    {
+      "name" : "Dot",
+      "image-name-specializations" : [
+        { "value" : "Dot-Light.png" },
+        { "appearance" : "dark", "value" : "Dot.png" }
+      ],
+      "glass" : false
+    },
+    {
+      "name" : "Face",
+      "image-name-specializations" : [
+        { "value" : "Face-Light.png" },
+        { "appearance" : "dark", "value" : "Face.png" }
+      ],
+      "glass" : false
+    },
+    {
+      "name" : "Edge",
+      "image-name-specializations" : [
+        { "value" : "Edge-Light.png" },
+        { "appearance" : "dark", "value" : "Edge.png" }
+      ],
+      "glass" : false
+    }
+      ],
+      "shadow" : { "kind" : "neutral", "opacity" : 0.4 },
+      "specular" : false,
+      "translucency" : { "enabled" : false, "value" : 0 }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [ "macOS" ]
+  }
+}

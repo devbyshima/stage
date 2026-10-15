@@ -1,0 +1,6 @@
+.build/
+build/
+Stage.xcodeproj/
+xcuserdata/
+.DS_Store
+.claude/
