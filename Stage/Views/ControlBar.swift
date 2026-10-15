@@ -25,7 +25,7 @@ struct ControlBar: View {
         .padding(.leading, 16)
         .padding(.trailing, 12)
         .padding(.vertical, 9)
-        .background(.black.opacity(0.45), in: .capsule)
+        .background(.black.opacity(0.8), in: .capsule)
         .background(.ultraThinMaterial, in: .capsule)
         .overlay { Capsule().strokeBorder(.white.opacity(0.12)) }
         .environment(\.colorScheme, .dark)
@@ -213,7 +213,7 @@ struct SavedToast: View {
         .padding(.leading, 14)
         .padding(.trailing, 12)
         .frame(height: 58)
-        .background(.black.opacity(0.45), in: .capsule)
+        .background(.black.opacity(0.8), in: .capsule)
         .background(.ultraThinMaterial, in: .capsule)
         .overlay { Capsule().strokeBorder(.white.opacity(0.12)) }
         .environment(\.colorScheme, .dark)

@@ -6,7 +6,8 @@ import SwiftUI
 /// skips opening the window.
 ///
 ///   -demo <state>             a drawn phone screen instead of live capture;
-///                             idle, recording, saved, landscape or empty
+///                             idle, recording, saved, landscape, connecting
+///                             or empty
 ///   -snapshot <file.png>      save the window as a PNG after a moment, then quit
 ///   -autoRecord <seconds>     record the live source that long, then quit
 @MainActor

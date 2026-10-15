@@ -1,16 +1,14 @@
 import SwiftUI
 
-/// The main window: the live device on black, with controls
-/// that fade away when the pointer rests, so the window can be shared as is.
+/// The main window: the live device edge to edge, nothing else. Its controls
+/// float in a strip under it (`ControlsPanel`) and fade away when the pointer
+/// rests, so the window can be shared as is.
 struct StageView: View {
-    /// The strip under the device that holds the controls.
-    static let controlsHeight: CGFloat = 80
-
     @Environment(StageModel.self) private var model
     @State private var window: NSWindow?
-    @State private var controlsVisible = true
+    @State private var controls = ControlsState()
+    @State private var panel: ControlsPanel?
     @State private var lastActivity = Date.now
-    @State private var pointerOverControls = false
 
     var body: some View {
         ZStack {
@@ -19,18 +17,15 @@ struct StageView: View {
         }
         .ignoresSafeArea()
         .environment(\.colorScheme, .dark)
-        .overlay(alignment: .bottom) {
-            if model.selectedSource != nil {
-                controls
-            }
-        }
         .frame(minWidth: 280, minHeight: 300)
         .onContinuousHover { _ in noteActivity() }
         .background(WindowReader { window = $0 })
         .onChange(of: window) { configureWindow() }
         .onChange(of: model.layout) {
-            if let window { WindowFitter.fit(window, layout: model.layout, bottomInset: Self.controlsHeight) }
+            if let window { WindowFitter.fit(window, layout: model.layout, roomBelow: ControlsPanel.height) }
         }
+        .onChange(of: controls.visible) { updatePanel() }
+        .onChange(of: model.selectedSourceID) { updatePanel() }
         .onChange(of: model.isLive) { updateWindowButtons() }
         .background {
             // Space starts and stops recording even while the controls are hidden.
@@ -57,35 +52,13 @@ struct StageView: View {
             AccessNeededView()
         } else if let source = model.selectedSource {
             if let layout = model.layout {
-                DeviceStage(layout: layout, bottomInset: Self.controlsHeight)
+                DeviceStage(layout: layout)
             } else {
                 ConnectingView(source: source)
             }
         } else {
             ConnectView()
         }
-    }
-
-    /// The bar, or right after a recording the saved notice in its place, so
-    /// neither ever covers the device.
-    private var controls: some View {
-        ZStack {
-            if let saved = model.lastSaved, !model.recording.isActive {
-                SavedToast(url: saved) { model.lastSaved = nil }
-                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
-            } else {
-                ControlBar()
-                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
-            }
-        }
-        .frame(maxWidth: 380)
-        .padding(.horizontal, 12)
-        .padding(.bottom, 14)
-        .onHover { pointerOverControls = $0 }
-        .opacity(controlsVisible ? 1 : 0)
-        .allowsHitTesting(controlsVisible)
-        .animation(.easeOut(duration: 0.25), value: controlsVisible)
-        .animation(.snappy, value: model.lastSaved)
     }
 
     private var alertIsPresented: Binding<Bool> {
@@ -96,7 +69,7 @@ struct StageView: View {
 
     private func noteActivity() {
         lastActivity = .now
-        if !controlsVisible { setControls(visible: true) }
+        if !controls.visible { controls.visible = true }
     }
 
     /// Hides the controls and pointer once the pointer rests.
@@ -108,11 +81,11 @@ struct StageView: View {
             #endif
             let delay: TimeInterval = model.lastSaved == nil ? 2.5 : 8
             let visible = !model.isLive
-                || pointerOverControls
+                || controls.pointerOver
                 || model.recording == .starting
                 || Date.now.timeIntervalSince(lastActivity) < delay
-            guard visible != controlsVisible else { continue }
-            setControls(visible: visible)
+            guard visible != controls.visible else { continue }
+            controls.visible = visible
             if !visible {
                 model.lastSaved = nil
                 if let window, window.isKeyWindow, window.frame.contains(NSEvent.mouseLocation) {
@@ -122,8 +95,9 @@ struct StageView: View {
         }
     }
 
-    private func setControls(visible: Bool) {
-        controlsVisible = visible
+    /// The strip shows with a device chosen, while the controls are up.
+    private func updatePanel() {
+        panel?.setVisible(controls.visible && model.selectedSource != nil)
     }
 
     /// The close, minimize and zoom buttons would sit on the picture, so they
@@ -141,7 +115,12 @@ struct StageView: View {
         window.backgroundColor = .black
         updateWindowLevel()
         updateWindowButtons()
-        WindowFitter.fit(window, layout: model.layout, bottomInset: Self.controlsHeight)
+        if panel == nil {
+            panel = ControlsPanel(content: ControlsLane(state: controls).environment(model))
+        }
+        panel?.attach(to: window)
+        updatePanel()
+        WindowFitter.fit(window, layout: model.layout, roomBelow: ControlsPanel.height)
     }
 
     private func updateWindowLevel() {
@@ -153,11 +132,10 @@ struct StageView: View {
 struct DeviceStage: View {
     @Environment(StageModel.self) private var model
     let layout: StageLayout
-    let bottomInset: CGFloat
 
     var body: some View {
         GeometryReader { geometry in
-            let rect = layout.pictureRect(in: geometry.size, bottomInset: bottomInset)
+            let rect = layout.pictureRect(in: geometry.size)
             picture
                 .frame(width: rect.width, height: rect.height)
                 .position(x: rect.midX, y: rect.midY)

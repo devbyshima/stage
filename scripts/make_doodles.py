@@ -393,6 +393,21 @@ def Logo(d):
     d.blob("rec", disc(196, 42, 31, seed=22), wobble=0.6)
 
 
+def write_imageset(name, svg):
+    folder = os.path.join(ASSETS, f"{name}.imageset")
+    os.makedirs(folder, exist_ok=True)
+    with open(os.path.join(folder, f"{name}.svg"), "w") as f:
+        f.write(svg)
+    contents = {
+        "images": [{"filename": f"{name}.svg", "idiom": "universal"}],
+        "info": {"author": "xcode", "version": 1},
+        "properties": {"preserves-vector-representation": True, "template-rendering-intent": "original"},
+    }
+    with open(os.path.join(folder, "Contents.json"), "w") as f:
+        json.dump(contents, f, indent=2)
+    print(folder)
+
+
 def main():
     for name, fn in DOODLES.items():
         d = Doodle()
@@ -404,18 +419,7 @@ def main():
                     f.write(d.svg(PALETTE, keys))
             print(LOGO)
             continue
-        folder = os.path.join(ASSETS, f"{name}.imageset")
-        os.makedirs(folder, exist_ok=True)
-        with open(os.path.join(folder, f"{name}.svg"), "w") as f:
-            f.write(d.svg(PALETTE))
-        contents = {
-            "images": [{"filename": f"{name}.svg", "idiom": "universal"}],
-            "info": {"author": "xcode", "version": 1},
-            "properties": {"preserves-vector-representation": True, "template-rendering-intent": "original"},
-        }
-        with open(os.path.join(folder, "Contents.json"), "w") as f:
-            json.dump(contents, f, indent=2)
-        print(folder)
+        write_imageset(name, d.svg(PALETTE))
 
 
 if __name__ == "__main__":

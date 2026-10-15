@@ -295,6 +295,11 @@ final class StageModel {
         sources = state == "empty" ? [] : [phone]
         microphones = [Microphone(id: "mic", name: "MacBook Pro Microphone")]
         guard state != "empty" else { return }
+        // Chosen, with no picture yet: the connecting screen.
+        guard state != "connecting" else {
+            selectedSourceID = phone.id
+            return
+        }
         selectedSourceID = phone.id
         videoSize = state == "landscape" ? CGSize(width: 2622, height: 1206) : CGSize(width: 1206, height: 2622)
         isRunning = true

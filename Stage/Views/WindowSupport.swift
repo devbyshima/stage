@@ -65,19 +65,21 @@ struct WindowReader: NSViewRepresentable {
 
 @MainActor
 enum WindowFitter {
-    /// Gives the window the picture's shape plus the controls strip, keeping
-    /// its size along the long side, so a rotated phone gets a rotated window.
-    /// Nil frees the shape.
-    static func fit(_ window: NSWindow, layout: StageLayout?, bottomInset: CGFloat) {
+    /// Gives the window the picture's shape, keeping its size along the long
+    /// side, so a rotated phone gets a rotated window, and leaves `roomBelow`
+    /// on screen for the controls under it. Nil frees the shape.
+    static func fit(_ window: NSWindow, layout: StageLayout?, roomBelow: CGFloat) {
         guard let layout else {
             window.contentResizeIncrements = NSSize(width: 1, height: 1)
             return
         }
         let current = window.contentRect(forFrameRect: window.frame).size
-        var size = layout.windowSize(longSide: max(current.width, current.height, 480), bottomInset: bottomInset)
+        var size = layout.windowSize(longSide: max(current.width, current.height, 480), bottomInset: 0)
         window.contentAspectRatio = size
         guard !window.styleMask.contains(.fullScreen),
-              let visible = (window.screen ?? NSScreen.main)?.visibleFrame else { return }
+              var visible = (window.screen ?? NSScreen.main)?.visibleFrame else { return }
+        visible.origin.y += roomBelow
+        visible.size.height -= roomBelow
 
         let shrink = min(1, visible.width * 0.92 / size.width, visible.height * 0.92 / size.height)
         size = CGSize(width: (size.width * shrink).rounded(), height: (size.height * shrink).rounded())
