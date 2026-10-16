@@ -24,20 +24,18 @@ struct ControlsLane: View {
             }
         }
         .frame(maxWidth: 380)
-        // It floats over whatever is under the window, so it lifts off it.
-        .shadow(color: .black.opacity(0.35), radius: 8, y: 3)
         .onHover { state.pointerOver = $0 }
         .padding(.horizontal, 12)
         .padding(.top, ControlsPanel.gap)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .environment(\.colorScheme, .dark)
         .animation(.snappy, value: model.lastSaved)
     }
 }
 
 /// The controls in a borderless strip of their own, attached under the Stage
-/// window: the window holds only the picture, with no band for them, and a
-/// meeting sharing the window never shows them.
+/// window: the window holds only the picture, with no band for them. Screen
+/// sharing and recordings leave the strip out, so a meeting only ever sees
+/// the phone.
 @MainActor
 final class ControlsPanel {
     /// The space between the window's bottom edge and the bar, and the room
@@ -63,6 +61,12 @@ final class ControlsPanel {
         // Space starts and stops recording.
         panel.becomesKeyOnlyIfNeeded = true
         panel.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle, .canJoinAllApplications]
+        // Sharing a window takes its child windows too, so without this a
+        // meeting would see the controls under the phone.
+        panel.sharingType = .none
+        #if DEBUG
+        if DebugLaunch.value(after: "-capturableControls") == "YES" { panel.sharingType = .readOnly }
+        #endif
         panel.contentView = NSHostingView(rootView: content)
     }
 

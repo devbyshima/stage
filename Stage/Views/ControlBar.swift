@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// QuickTime-style controls: speaker on the left, record in the middle,
-/// time and options on the right.
+/// QuickTime-style controls on a Liquid Glass capsule: speaker on the left,
+/// record in the middle, time and options on the right. The glass follows
+/// the Mac's light or dark appearance, and so do the glyphs on it.
 struct ControlBar: View {
     @Environment(StageModel.self) private var model
 
@@ -25,10 +26,7 @@ struct ControlBar: View {
         .padding(.leading, 16)
         .padding(.trailing, 12)
         .padding(.vertical, 9)
-        .background(.black.opacity(0.8), in: .capsule)
-        .background(.ultraThinMaterial, in: .capsule)
-        .overlay { Capsule().strokeBorder(.white.opacity(0.12)) }
-        .environment(\.colorScheme, .dark)
+        .glassEffect(.regular.interactive(), in: .capsule)
     }
 }
 
@@ -45,7 +43,7 @@ struct RecordButton: View {
         Button(action: action) {
             ZStack {
                 Circle()
-                    .strokeBorder(.white.opacity(0.9), lineWidth: 2.5)
+                    .strokeBorder(.primary.opacity(0.85), lineWidth: 2.5)
                 RoundedRectangle(cornerRadius: isRecording ? 4 : 14, style: .continuous)
                     .fill(Color(red: 1, green: 0.23, blue: 0.19))
                     .frame(width: isRecording ? 16 : 28, height: isRecording ? 16 : 28)
@@ -69,7 +67,7 @@ struct RecordingClock: View {
             if case .recording(let since) = state {
                 TimelineView(.periodic(from: since, by: 1)) { context in
                     Text(Clock.string(context.date.timeIntervalSince(since)))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                 }
             } else {
                 Text("0:00")
@@ -107,7 +105,7 @@ struct VolumeControl: View {
                 .frame(width: 64)
                 .accessibilityLabel("Volume on this Mac")
         }
-        .foregroundStyle(.white.opacity(0.9))
+        .foregroundStyle(.primary)
     }
 }
 
@@ -154,7 +152,7 @@ struct OptionsMenu: View {
             Image(systemName: "chevron.down.circle.fill")
                 .font(.title3)
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
@@ -177,6 +175,7 @@ struct OptionsMenu: View {
     }
 }
 
+/// Right after a recording, in the bar's place: the same glass capsule.
 struct SavedToast: View {
     let url: URL
     let onDismiss: () -> Void
@@ -197,13 +196,15 @@ struct SavedToast: View {
             }
             Spacer(minLength: 4)
             Button("Show") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+                .buttonStyle(.glass)
                 .help("Show in Finder")
             Button("Play") { NSWorkspace.shared.open(url) }
+                .buttonStyle(.glass)
             Button(action: onDismiss) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title3)
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
             .help("Back to the controls")
@@ -213,9 +214,6 @@ struct SavedToast: View {
         .padding(.leading, 14)
         .padding(.trailing, 12)
         .frame(height: 58)
-        .background(.black.opacity(0.8), in: .capsule)
-        .background(.ultraThinMaterial, in: .capsule)
-        .overlay { Capsule().strokeBorder(.white.opacity(0.12)) }
-        .environment(\.colorScheme, .dark)
+        .glassEffect(.regular.interactive(), in: .capsule)
     }
 }

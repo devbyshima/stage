@@ -1,7 +1,7 @@
 import AppKit
 
-/// A red "● 1:23" in the menu bar while recording. It stays out of the
-/// window being shared, and clicking it stops the recording.
+/// A red "● 1:23" in the menu bar while recording, kept out of screen
+/// sharing (even of the whole screen). Clicking it stops the recording.
 @MainActor
 final class RecordingStatusItem: NSObject {
     var onClick: (() -> Void)?
@@ -25,6 +25,7 @@ final class RecordingStatusItem: NSObject {
                 button.target = self
                 button.action = #selector(clicked)
             }
+            item.button?.window?.sharingType = .none
             self.item = item
         }
         timer?.invalidate()

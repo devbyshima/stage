@@ -10,6 +10,9 @@ import SwiftUI
 ///                             or empty
 ///   -snapshot <file.png>      save the window as a PNG after a moment, then quit
 ///   -autoRecord <seconds>     record the live source that long, then quit
+///   -capturableControls YES   leave the controls strip in screenshots, which
+///                             screen sharing otherwise leaves out
+///   -look light|dark          the app in that appearance, whatever the Mac's
 @MainActor
 enum DebugLaunch {
     static let arguments = ProcessInfo.processInfo.arguments
@@ -23,6 +26,11 @@ enum DebugLaunch {
     }
 
     static func scheduleChecks(model: StageModel) {
+        switch value(after: "-look") {
+        case "light": NSApp.appearance = NSAppearance(named: .aqua)
+        case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
+        default: break
+        }
         if let path = value(after: "-snapshot") {
             Task {
                 try? await Task.sleep(for: .seconds(2.5))

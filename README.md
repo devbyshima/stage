@@ -16,13 +16,16 @@ there is no way in for an app of its own, so Stage doesn't offer one.
 3. Press **Space** (or ⌘R, or the red button) to start and stop recording.
 
 Recordings are the phone's own video stream at its full native resolution.
-The window holds only that picture, edge to edge. The controls float in a
-strip of their own just under the window, never over the picture, and fade
-away with nothing left behind; a meeting sharing the window never sees them. Recordings are saved to `~/Movies/Stage` as `<Device> 2026-10-15 at 15.03.12.mov`.
+The window holds only that picture, edge to edge. The controls float on a
+Liquid Glass strip of their own just under the window, never over the picture,
+and fade away with nothing left behind; a meeting sharing the window never
+sees them. Recordings are saved to `~/Movies/Stage` as `<Device> 2026-10-15 at 15.03.12.mov`.
 
 ### Presenting in a meeting
 
-- Share the **Stage** window (not the whole screen) in Zoom, Meet or Teams. With
+- Share the **Stage** window in Zoom, Meet or Teams: the meeting sees only the
+  phone's screen. The controls strip and the menu bar's recording timer are
+  kept out of screen sharing, even when you share the whole screen. With
   Stage Manager on, Stage's window stays beside the app in front instead of
   shrinking into the side strip, so the meeting can list and share it.
 - The controls and pointer fade out after a moment; move the pointer over the
@@ -77,7 +80,8 @@ Stage.app/Contents/MacOS/Stage -demo idle -snapshot /tmp/stage.png
 ```
 
 `-demo` takes `idle`, `recording`, `saved`, `landscape`, `connecting` or `empty`
-and draws a fake phone. `-autoRecord <seconds>` records the live source, then quits. Every
+and draws a fake phone. `-look light|dark` sets the appearance, and
+`-capturableControls YES` leaves the controls in screenshots. `-autoRecord <seconds>` records the live source, then quits. Every
 flag needs a value: a lone word is read as a file to open, and macOS then
 skips opening the window.
 
