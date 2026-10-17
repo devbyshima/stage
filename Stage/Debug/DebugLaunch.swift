@@ -15,6 +15,7 @@ import SwiftUI
 ///   -snapshotDelay <seconds>  how long that moment is; 2.5 by default
 ///   -snapshotHeight <points>  make the window this tall first, to see more
 ///   -snapshotInspector <png>  with -studioMockup: the whole mockup inspector
+///   -snapshotSettings <png>   the Settings window's contents
 ///   -autoRecord <seconds>     record the live source that long, then quit
 ///   -capturableControls YES   leave the controls strip in screenshots, which
 ///                             screen sharing otherwise leaves out
@@ -65,6 +66,12 @@ enum DebugLaunch {
                 NSApp.terminate(nil)
             }
         }
+        if let path = value(after: "-snapshotSettings") {
+            Task {
+                try? await Task.sleep(for: .seconds(1))
+                snapshot(SettingsView().environment(model), width: 480, height: 900, to: URL(filePath: path))
+            }
+        }
         if let seconds = value(after: "-autoRecord").flatMap(Double.init) {
             Task { await autoRecord(model, seconds: seconds) }
         }
@@ -80,6 +87,7 @@ enum DebugLaunch {
             document.mockup.shot = shot
         }
         if let motion = value(after: "-studioMotion").flatMap(MockupMotion.init(rawValue:)) {
+            if motion == .focus, document.mockup.focusAreas.isEmpty { document.mockup.focusAreas = [.top, .bottom] }
             document.mockup.motion = motion
         }
         if value(after: "-studioBackground") == "clear" {
@@ -149,8 +157,13 @@ enum DebugLaunch {
     /// The mockup inspector laid out at full height in a window of its own,
     /// which is never shown.
     private static func snapshotInspector(document: StudioDocument, to url: URL) {
-        let host = NSHostingView(rootView: MockupInspector(document: document).frame(width: 320, height: 2600))
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 320, height: 2600), styleMask: [.borderless],
+        snapshot(MockupInspector(document: document), width: 320, height: 2600, to: url)
+    }
+
+    /// `view` laid out at that size in a window that's never shown.
+    private static func snapshot(_ view: some View, width: CGFloat, height: CGFloat, to url: URL) {
+        let host = NSHostingView(rootView: view.frame(width: width, height: height))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: height), styleMask: [.borderless],
                               backing: .buffered, defer: false)
         window.appearance = NSApp.effectiveAppearance
         window.contentView = host

@@ -9,6 +9,7 @@ struct StudioView: View {
     static let windowID = "studio"
 
     @Environment(StageModel.self) private var model
+    @Environment(\.controlActiveState) private var activeState
     @State private var document: StudioDocument
     @State private var showsExport = false
 
@@ -53,7 +54,14 @@ struct StudioView: View {
         .sheet(isPresented: $showsExport) {
             ExportSheet(document: document, format: model.prefs.videoFormat, folder: model.prefs.saveFolder)
         }
-        .onDisappear { document.player.pause() }
+        .onAppear { StudioRegistry.shared.activate(document) }
+        .onChange(of: activeState) { _, state in
+            if state == .key { StudioRegistry.shared.activate(document) }
+        }
+        .onDisappear {
+            document.player.pause()
+            StudioRegistry.shared.remove(document)
+        }
     }
 
     @ViewBuilder private var preview: some View {

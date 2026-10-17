@@ -34,7 +34,14 @@ final class MockupScene: @unchecked Sendable {
     private var originals: [ObjectIdentifier: (diffuse: Any?, emission: Any?, lighting: SCNMaterial.LightingModel)] = [:]
     /// The screen's width over its height, as the model was made.
     private var screenAspect: CGFloat = 0.46
+    /// Where the screen sits on the phone: its corners, and its front.
+    private var screenFrame: (low: SCNVector3, high: SCNVector3)?
     private var shownContents: AnyObject?
+    /// How the video sits on the screen, for finding focus areas on it.
+    private var shownTurns = 0
+    private var shownFlipped = false
+    /// The shot's first phone, the one focus areas are on.
+    private var hero: SCNNode?
 
     init(modelURL: URL, pairURL: URL? = nil) throws {
         (phone, materials) = try Self.load(modelURL)
@@ -130,25 +137,54 @@ final class MockupScene: @unchecked Sendable {
             material.emission.wrapS = .clampToBorder
             material.emission.wrapT = .clampToBorder
         }
-        screenAspect = measureScreen() ?? screenAspect
+        screenFrame = measureScreen()
+        if let frame = screenFrame {
+            screenAspect = (frame.high.x - frame.low.x) / (frame.high.y - frame.low.y)
+        }
         screenPart = chosen
         shownContents = nil
         return chosen
     }
 
-    /// The screen's width over its height, from the meshes it covers.
-    private func measureScreen() -> CGFloat? {
-        var low = SCNVector3(CGFloat.greatestFiniteMagnitude, .greatestFiniteMagnitude, 0)
-        var high = SCNVector3(-CGFloat.greatestFiniteMagnitude, -.greatestFiniteMagnitude, 0)
+    /// The box round the meshes the screen covers, in the phone's space.
+    private func measureScreen() -> (low: SCNVector3, high: SCNVector3)? {
+        var low = SCNVector3(CGFloat.greatestFiniteMagnitude, .greatestFiniteMagnitude, .greatestFiniteMagnitude)
+        var high = SCNVector3(-CGFloat.greatestFiniteMagnitude, -.greatestFiniteMagnitude, -.greatestFiniteMagnitude)
         phone.enumerateHierarchy { node, _ in
             guard let geometry = node.geometry,
                   geometry.materials.contains(where: { material in screenMaterials.contains { $0 === material } }) else { return }
             let (a, b) = Self.bounds(of: node, in: phone)
-            low = SCNVector3(min(low.x, a.x), min(low.y, a.y), 0)
-            high = SCNVector3(max(high.x, b.x), max(high.y, b.y), 0)
+            low = SCNVector3(min(low.x, a.x), min(low.y, a.y), min(low.z, a.z))
+            high = SCNVector3(max(high.x, b.x), max(high.y, b.y), max(high.z, b.z))
         }
         guard high.x > low.x, high.y > low.y else { return nil }
-        return (high.x - low.x) / (high.y - low.y)
+        return (low, high)
+    }
+
+    /// The middle of `area` (in the video as it shows) on the phone's
+    /// screen, and the area's width and height there.
+    private func place(_ area: MockupFocus) -> (center: SCNVector3, size: CGSize)? {
+        guard let frame = screenFrame else { return nil }
+        // From the video's corner-to-corner to the screen's, undoing the
+        // quarter turns and mirror the video was shown with.
+        var a = (area.x0 + area.x1) / 2 - 0.5
+        let b = (area.y0 + area.y1) / 2 - 0.5
+        if shownFlipped { a = -a }
+        let (x, y): (Double, Double) = switch ((shownTurns % 4) + 4) % 4 {
+        case 1: (b, -a)
+        case 2: (-a, -b)
+        case 3: (-b, a)
+        default: (a, b)
+        }
+        let quarter = shownTurns % 2 != 0
+        let width = Double(frame.high.x - frame.low.x)
+        let height = Double(frame.high.y - frame.low.y)
+        let center = SCNVector3((Double(frame.low.x + frame.high.x) / 2) + x * width,
+                                (Double(frame.low.y + frame.high.y) / 2) - y * height,
+                                Double(frame.high.z))
+        let across = (area.x1 - area.x0) * (quarter ? height : width)
+        let down = (area.y1 - area.y0) * (quarter ? width : height)
+        return (center, CGSize(width: across, height: down))
     }
 
     /// Puts `contents` (an AVPlayer for the preview, a frame for export),
@@ -164,6 +200,8 @@ final class MockupScene: @unchecked Sendable {
             material.emission.contentsTransform = transform
         }
         shownContents = contents
+        shownTurns = turns
+        shownFlipped = flipped
     }
 
     // MARK: - Shot
@@ -175,14 +213,23 @@ final class MockupScene: @unchecked Sendable {
         let layout = settings.shot.layout
         let move = settings.motion.offsets(at: progress, amount: settings.motionAmount)
         let focus = SCNVector3(layout.focus)
-        let aim = SCNVector3(focus.x, focus.y + move.lift, focus.z)
+        var aim = SCNVector3(focus.x, focus.y + move.lift, focus.z)
         turn.position = focus
         group.position = SCNVector3(-focus.x, -focus.y, -focus.z)
         turn.eulerAngles = SCNVector3((settings.pitch + move.pitch) * .pi / 180, (settings.yaw + move.yaw) * .pi / 180, 0)
 
         let lens = Double(layout.lens)
-        let visible = max(Double(layout.visible.y), Double(layout.visible.x) / Double(settings.canvas.aspectRatio))
-        let distance = visible / 2 / tan(lens * .pi / 360) / max(settings.zoom * move.zoom, 0.2)
+        let aspect = Double(settings.canvas.aspectRatio)
+        let visible = max(Double(layout.visible.y), Double(layout.visible.x) / aspect)
+        var zoom = settings.zoom * move.zoom
+        if settings.motion == .focus, let hero, let area = MockupFocus.path(settings.focusAreas, at: progress),
+           let (center, size) = place(area) {
+            // Close in until the area fills most of the frame.
+            aim = hero.convertPosition(center, to: nil)
+            let needed = max(size.height, size.width / aspect) / 0.8
+            zoom = settings.zoom * min(max(visible / max(needed, 0.01), 1), 6)
+        }
+        let distance = visible / 2 / tan(lens * .pi / 360) / max(zoom, 0.2)
         let azimuth = Double(layout.azimuth) * .pi / 180
         let elevation = Double(layout.elevation) * .pi / 180
         cameraNode.position = SCNVector3(
@@ -205,6 +252,7 @@ final class MockupScene: @unchecked Sendable {
 
     private func arrange(_ shot: MockupShot) {
         for node in group.childNodes { node.removeFromParentNode() }
+        hero = nil
         for (index, placement) in shot.layout.phones.enumerated() {
             let copy = (index > 0 ? pair ?? phone : phone).clone()
             copy.position = SCNVector3(placement.position)
@@ -214,6 +262,7 @@ final class MockupScene: @unchecked Sendable {
                 * simd_quatf(angle: placement.yaw * degrees, axis: [0, 1, 0])
                 * simd_quatf(angle: placement.roll * degrees, axis: [0, 0, 1])
             group.addChildNode(copy)
+            if hero == nil { hero = copy }
         }
         arranged = shot
     }

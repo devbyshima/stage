@@ -28,6 +28,10 @@ final class Preferences {
     var videoFormat: VideoFormat {
         didSet { save(videoFormat.rawValue, Key.videoFormat) }
     }
+    /// Whether AI tools can reach the Studio through `Stage --mcp`.
+    var allowsAIControl: Bool {
+        didSet { save(allowsAIControl, Key.allowsAIControl) }
+    }
     /// The source last picked by hand, shown again whenever it is connected.
     var preferredSourceID: String? {
         didSet { save(preferredSourceID, Key.preferredSourceID) }
@@ -42,6 +46,7 @@ final class Preferences {
             ?? Self.defaultSaveFolder
         videoFormat = defaults.string(forKey: Key.videoFormat).flatMap(VideoFormat.init(rawValue:)) ?? .h264
         preferredSourceID = defaults.string(forKey: Key.preferredSourceID)
+        allowsAIControl = defaults.object(forKey: Key.allowsAIControl) as? Bool ?? true
         isLoaded = true
     }
 
@@ -59,6 +64,7 @@ final class Preferences {
         static let saveFolderPath = "saveFolderPath"
         static let videoFormat = "videoFormat"
         static let preferredSourceID = "preferredSourceID"
+        static let allowsAIControl = "allowsAIControl"
     }
 }
 

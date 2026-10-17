@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 struct MockupInspector: View {
     @Bindable var document: StudioDocument
     @State private var thumbnails = ShotThumbnails()
-    @State private var templates = MockupTemplate.saved()
+    private let templates = MockupTemplates.shared
     @State private var savingTemplate = false
     @State private var templateName = ""
     @State private var showsEffects = false
@@ -166,15 +166,50 @@ struct MockupInspector: View {
     // MARK: - Motion, light and lens
 
     @ViewBuilder private var motion: some View {
-        Picker("Camera", selection: $document.mockup.motion) {
+        Picker("Camera", selection: cameraMotion) {
             ForEach(MockupMotion.allCases) { Text($0.title).tag($0) }
         }
-        if document.mockup.motion != .still {
+        if document.mockup.motion == .focus {
+            ForEach(Array(document.mockup.focusAreas.enumerated()), id: \.offset) { index, area in
+                HStack {
+                    Text("\(index + 1). \(area.title)")
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Spacer()
+                    Button("Remove", systemImage: "minus.circle") {
+                        document.mockup.focusAreas.remove(at: index)
+                    }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
+                    .help("Remove this area")
+                }
+            }
+            Menu("Add Area") {
+                ForEach([MockupFocus.top, .middle, .bottom, .whole], id: \.title) { area in
+                    Button(area.title) { document.mockup.focusAreas.append(area) }
+                }
+            }
+            Text("The camera closes in on each area in turn across the video. An AI tool connected to Stage can set any area.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else if document.mockup.motion != .still {
             Slider(value: $document.mockup.motionAmount, in: 0.2...2) { Text("Amount") }
             Text("The camera moves across the whole video. Play it to see.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    /// The motion; Focus Areas starts on the top of the screen, then the bottom.
+    private var cameraMotion: Binding<MockupMotion> {
+        Binding(
+            get: { document.mockup.motion },
+            set: { motion in
+                if motion == .focus, document.mockup.focusAreas.isEmpty {
+                    document.mockup.focusAreas = [.top, .bottom]
+                }
+                document.mockup.motion = motion
+            })
     }
 
     @ViewBuilder private var light: some View {
@@ -206,20 +241,17 @@ struct MockupInspector: View {
     // MARK: - Templates
 
     @ViewBuilder private var templateControls: some View {
-        if templates.isEmpty {
+        if templates.items.isEmpty {
             Text("Save a setup you like to start the next mockup from it.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         } else {
-            ForEach(templates) { template in
+            ForEach(templates.items) { template in
                 HStack {
                     Button(template.name) { apply(template) }
                         .buttonStyle(.link)
                     Spacer()
-                    Button("Delete", systemImage: "minus.circle") {
-                        templates.removeAll { $0.id == template.id }
-                        MockupTemplate.save(templates)
-                    }
+                    Button("Delete", systemImage: "minus.circle") { templates.remove(template) }
                     .labelStyle(.iconOnly)
                     .buttonStyle(.borderless)
                     .help("Delete \(template.name)")
@@ -227,7 +259,7 @@ struct MockupInspector: View {
             }
         }
         Button("Save as Template…") {
-            templateName = "\(document.mockup.shot.title) \(templates.count + 1)"
+            templateName = "\(document.mockup.shot.title) \(templates.items.count + 1)"
             savingTemplate = true
         }
     }
@@ -235,8 +267,7 @@ struct MockupInspector: View {
     private func saveTemplate() {
         let name = templateName.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
-        templates.append(MockupTemplate(name: name, settings: document.mockup))
-        MockupTemplate.save(templates)
+        templates.save(name, settings: document.mockup)
     }
 
     private func apply(_ template: MockupTemplate) {

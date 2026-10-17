@@ -1,4 +1,5 @@
 import AppKit
+import Observation
 import SwiftUI
 
 /// A colour that can be saved: its sRGB components.
@@ -101,6 +102,7 @@ enum MockupMotion: String, Codable, CaseIterable, Identifiable, Sendable {
     case drift
     case rise
     case scroll
+    case focus
 
     var id: Self { self }
 
@@ -113,6 +115,7 @@ enum MockupMotion: String, Codable, CaseIterable, Identifiable, Sendable {
         case .drift: "Drift"
         case .rise: "Rise"
         case .scroll: "Top to Bottom"
+        case .focus: "Focus Areas"
         }
     }
 
@@ -123,7 +126,9 @@ enum MockupMotion: String, Codable, CaseIterable, Identifiable, Sendable {
         let t = min(max(progress, 0), 1)
         let eased = t * t * (3 - 2 * t)
         switch self {
-        case .still:
+        case .still, .focus:
+            // Focus areas move the camera from the scene, which knows where
+            // the screen is.
             return (0, 0, 1, 0)
         case .pushIn:
             return (0, 0, 1 + 0.3 * amount * eased, 0)
@@ -140,6 +145,54 @@ enum MockupMotion: String, Codable, CaseIterable, Identifiable, Sendable {
             // Close on the top of the screen, then down to the bottom.
             return (0, 0, 1 + 0.9 * amount, 0.3 * amount * (1 - 2 * eased))
         }
+    }
+}
+
+/// A part of the screen for the camera to close in on: fractions of the
+/// video's width and height as it shows on the screen, from its top left.
+struct MockupFocus: Codable, Equatable, Sendable {
+    var x0: Double
+    var y0: Double
+    var x1: Double
+    var y1: Double
+
+    static let top = MockupFocus(x0: 0, y0: 0, x1: 1, y1: 0.38)
+    static let middle = MockupFocus(x0: 0, y0: 0.31, x1: 1, y1: 0.69)
+    static let bottom = MockupFocus(x0: 0, y0: 0.62, x1: 1, y1: 1)
+    static let whole = MockupFocus(x0: 0, y0: 0, x1: 1, y1: 1)
+
+    /// Inside the screen, corners in order, and no thinner than a tenth.
+    var tidy: MockupFocus {
+        func clamp(_ value: Double) -> Double { min(max(value, 0), 1) }
+        var area = MockupFocus(x0: clamp(min(x0, x1)), y0: clamp(min(y0, y1)), x1: clamp(max(x0, x1)), y1: clamp(max(y0, y1)))
+        if area.x1 - area.x0 < 0.1 { area.x0 = min(area.x0, 0.9); area.x1 = area.x0 + 0.1 }
+        if area.y1 - area.y0 < 0.1 { area.y0 = min(area.y0, 0.9); area.y1 = area.y0 + 0.1 }
+        return area
+    }
+
+    var title: String {
+        switch self {
+        case .top: "Top"
+        case .middle: "Middle"
+        case .bottom: "Bottom"
+        case .whole: "Whole Screen"
+        default: String(format: "%.0f%% to %.0f%% down, %.0f%% to %.0f%% across", y0 * 100, y1 * 100, x0 * 100, x1 * 100)
+        }
+    }
+
+    /// Where the camera is at `progress` (0 to 1) through a tour of
+    /// `areas`: it rests on each in turn and glides between them.
+    static func path(_ areas: [MockupFocus], at progress: Double) -> MockupFocus? {
+        guard let first = areas.first else { return nil }
+        guard areas.count > 1 else { return first }
+        let position = min(max(progress, 0), 1) * Double(areas.count - 1)
+        let index = min(Int(position), areas.count - 2)
+        let travel = min(max((position - Double(index) - 0.3) / 0.4, 0), 1)
+        let eased = travel * travel * (3 - 2 * travel)
+        let from = areas[index]
+        let to = areas[index + 1]
+        func mix(_ a: Double, _ b: Double) -> Double { a + (b - a) * eased }
+        return MockupFocus(x0: mix(from.x0, to.x0), y0: mix(from.y0, to.y0), x1: mix(from.x1, to.x1), y1: mix(from.y1, to.y1))
     }
 }
 
@@ -181,6 +234,8 @@ struct MockupSettings: Codable, Equatable, Sendable {
     var zoom = 1.0
     var motion = MockupMotion.still
     var motionAmount = 1.0
+    /// The parts of the screen the Focus Areas motion visits, in order.
+    var focusAreas: [MockupFocus] = []
     var lighting = MockupLighting.studio
     /// Degrees the light comes round the phones.
     var lightAngle = 0.0
@@ -248,6 +303,7 @@ extension MockupSettings {
         read(.zoom, into: &zoom)
         read(.motion, into: &motion)
         read(.motionAmount, into: &motionAmount)
+        read(.focusAreas, into: &focusAreas)
         read(.lighting, into: &lighting)
         read(.lightAngle, into: &lightAngle)
         read(.depthOfField, into: &depthOfField)
@@ -278,5 +334,30 @@ struct MockupTemplate: Codable, Identifiable, Equatable, Sendable {
         if let data = try? JSONEncoder().encode(templates) {
             UserDefaults.standard.set(data, forKey: storageKey)
         }
+    }
+}
+
+/// The saved templates, shared by the inspector and AI control.
+@MainActor
+@Observable
+final class MockupTemplates {
+    static let shared = MockupTemplates()
+
+    private(set) var items = MockupTemplate.saved()
+
+    /// Saves `settings` as `name`, replacing a template of that name.
+    func save(_ name: String, settings: MockupSettings) {
+        items.removeAll { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+        items.append(MockupTemplate(name: name, settings: settings))
+        MockupTemplate.save(items)
+    }
+
+    func remove(_ template: MockupTemplate) {
+        items.removeAll { $0.id == template.id }
+        MockupTemplate.save(items)
+    }
+
+    func named(_ name: String) -> MockupTemplate? {
+        items.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }
     }
 }

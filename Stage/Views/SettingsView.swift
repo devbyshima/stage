@@ -34,6 +34,26 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("AI Control") {
+                Toggle("Let AI tools work in the Studio", isOn: $prefs.allowsAIControl)
+                if prefs.allowsAIControl {
+                    LabeledContent("Command") {
+                        Text("\(MCPServer.command) \(MCPServer.argument)")
+                            .font(.caption.monospaced())
+                            .textSelection(.enabled)
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                    }
+                    HStack {
+                        Button("Copy for Claude Code") { copy(claudeCodeCommand) }
+                        Button("Copy MCP Config") { copy(mcpConfig) }
+                    }
+                }
+                Text("Add Stage as an MCP server in Claude, Claude Code, Cursor or another AI tool. It can then open recordings, cut them, set up the mockup, look at it and export, while Stage is open.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Presenting") {
                 Toggle("Float on top of other windows", isOn: $prefs.floatsOnTop)
                 Text("Browsers such as Chrome and Arc can't share a floating window. Turn this off to present Stage in Google Meet.")
@@ -44,6 +64,25 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 480)
         .fixedSize(horizontal: false, vertical: true)
+        .onChange(of: prefs.allowsAIControl) { _, allowed in
+            MCPServer.shared.setEnabled(allowed)
+        }
+    }
+
+    private var claudeCodeCommand: String {
+        "claude mcp add stage -- \"\(MCPServer.command)\" \(MCPServer.argument)"
+    }
+
+    /// The `mcpServers` entry most AI tools take in their settings file.
+    private var mcpConfig: String {
+        let config = ["mcpServers": ["stage": ["command": MCPServer.command, "args": [MCPServer.argument]]]]
+        let data = (try? JSONSerialization.data(withJSONObject: config, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])) ?? Data()
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private func copy(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
     }
 
     @ViewBuilder private var cameraControl: some View {

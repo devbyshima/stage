@@ -181,11 +181,11 @@ enum MockupStill {
         return CGSize(width: (canvas.size.width * scale).rounded(), height: (canvas.size.height * scale).rounded())
     }
 
-    /// `frame` on the mockup's screens, `progress` through the video's motion.
+    /// `frame` on the mockup's screens, `progress` through the video's
+    /// motion, as a PNG of `size`.
     @concurrent
-    static func render(_ frame: CGImage, mockup: MockupScene, settings: MockupSettings, progress: Double,
-                       to url: URL) async throws {
-        let size = size(for: settings.canvas)
+    static func png(_ frame: CGImage, mockup: MockupScene, settings: MockupSettings, progress: Double,
+                    size: CGSize) async throws -> Data {
         let renderer = SCNRenderer(device: MTLCreateSystemDefaultDevice(), options: nil)
         renderer.scene = mockup.scene
         renderer.pointOfView = mockup.cameraNode
@@ -199,6 +199,13 @@ enum MockupStill {
               let data = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else {
             throw StudioExportError.failed("Stage couldn't render the mockup.")
         }
+        return data
+    }
+
+    /// The 5K still, written to `url`.
+    static func render(_ frame: CGImage, mockup: MockupScene, settings: MockupSettings, progress: Double,
+                       to url: URL) async throws {
+        let data = try await png(frame, mockup: mockup, settings: settings, progress: progress, size: size(for: settings.canvas))
         try data.write(to: url)
     }
 }

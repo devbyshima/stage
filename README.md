@@ -38,8 +38,9 @@ in Settings.
     Corner, Landscape, Pair, Stack, Mirror, Trio, Float). Drag the preview to
     turn and tilt the phones, scroll or pinch to size them, double-click to
     put them back. Shots with more than one phone can use a second finish.
-  - **Motion**: the camera can push in, pull back, orbit, drift, rise, or
-    travel from the top of the screen to the bottom over the video.
+  - **Motion**: the camera can push in, pull back, orbit, drift, rise,
+    travel from the top of the screen to the bottom, or visit focus areas:
+    parts of the screen it closes in on in turn across the video.
   - **Light**: Studio, Soft, Dramatic or Bright, brought round to any angle.
   - **Lens**: depth of field, glow, grain, vignette, saturation and contrast.
   - **Background**: the studio sweep, night, white, black, any colour,
@@ -60,6 +61,35 @@ Stage's own iPhones are USDZ files in `Stage/Resources/Mockups`, named
 file named that way and it joins the list. You can also use a USDZ model of
 your own: any works if its screen is a part of its own, which Stage finds by
 name or lets you choose.
+
+## AI control (MCP)
+
+Stage is an MCP server, so Claude, Claude Code, Cursor or another AI tool can
+work in the Studio: open a recording, cut it, set up the mockup ("tilt the
+iPhone a little and focus on the bottom of the screen"), look at the result
+and export it. **Settings › AI Control** turns it on or off and copies the
+setup. For Claude Code:
+
+```bash
+claude mcp add stage -- /Applications/Stage.app/Contents/MacOS/Stage --mcp
+```
+
+Tools that take a settings file want
+`{"mcpServers": {"stage": {"command": "/Applications/Stage.app/Contents/MacOS/Stage", "args": ["--mcp"]}}}`.
+`Stage --mcp` opens Stage if it isn't running and relays the tool's messages
+to it over a socket in Stage's support folder that only your user can open.
+
+| Tool | Does |
+|------|------|
+| `get_studio` | What's open, the mockup's settings and every choice |
+| `list_recordings`, `open_recording` | Find a recording and open it in the Studio |
+| `update_mockup` | iPhone, finish, shot, angle, size, motion, light, lens, background, frame |
+| `set_focus_areas` | Parts of the screen for the camera to visit in turn |
+| `reset_pose` | The shot's own angle and size again |
+| `edit_recording` | Seek, split, delete or trim pieces, undo, sound on or off |
+| `render_preview` | A picture of the result, for the AI to check its work |
+| `save_template`, `apply_template` | Keep a setup, start from one |
+| `export` | The video, or a 5K still, to a file |
 
 ## Keynote and video calls: Stage Camera
 
@@ -144,7 +174,9 @@ The Studio has its own: `-studio <movie>` opens one, `-studioMockup <iPhone or
 file>`, `-studioShot <shot>`, `-studioMotion <motion>` and `-studioBackground
 clear` set the mockup up, and `-studioExport <file.mov>` or `-studioStill
 <file.png>` export it and quit. `-snapshotInspector <file.png>` saves the whole
-mockup inspector.
+mockup inspector, and `-snapshotSettings <file.png>` the Settings. A Debug
+build listens for AI tools on a socket of its own, so it never takes over the
+one the Stage in use has.
 
 ## How it works
 

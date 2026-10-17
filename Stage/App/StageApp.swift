@@ -1,6 +1,5 @@
 import SwiftUI
 
-@main
 struct StageApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
@@ -45,6 +44,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #else
         model.start()
         #endif
+        StageTools.shared.model = model
+        MCPServer.shared.setEnabled(model.prefs.allowsAIControl)
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        MCPServer.shared.shutDown()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
