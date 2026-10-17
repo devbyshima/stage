@@ -15,6 +15,14 @@ struct StageApp: App {
         .defaultSize(width: 420, height: 820)
         .commands { StageCommands(model: appDelegate.model) }
 
+        WindowGroup("Studio", id: StudioView.windowID, for: URL.self) { $url in
+            if let url {
+                StudioView(url: url)
+                    .environment(appDelegate.model)
+            }
+        }
+        .defaultSize(width: 1120, height: 800)
+
         Settings {
             SettingsView()
                 .environment(appDelegate.model)
@@ -77,7 +85,33 @@ private struct RecordingCommands: View {
         .keyboardShortcut("r")
         .disabled(!model.canRecord && !model.recording.isActive)
 
-        Button("Open Recordings Folder") {
+        Divider()
+
+        Button("Edit Last Recording") {
+            if let recording = model.lastRecording ?? RecordingLibrary.recent(limit: 1).first {
+                model.openStudio(recording)
+            }
+        }
+        .keyboardShortcut("l")
+
+        Button("Open in Studio…") {
+            model.chooseMovieForStudio()
+        }
+        .keyboardShortcut("o")
+
+        Menu("Recent Recordings") {
+            let recent = RecordingLibrary.recent()
+            ForEach(recent, id: \.self) { url in
+                Button(url.deletingPathExtension().lastPathComponent) { model.openStudio(url) }
+            }
+            if recent.isEmpty {
+                Text("No Recordings Yet")
+            }
+        }
+
+        Divider()
+
+        Button("Show Exports Folder") {
             model.openRecordingsFolder()
         }
         .keyboardShortcut("o", modifiers: [.command, .shift])

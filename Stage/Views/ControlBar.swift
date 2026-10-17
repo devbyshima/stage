@@ -146,7 +146,7 @@ struct OptionsMenu: View {
             Toggle("Float on Top", isOn: $prefs.floatsOnTop)
 
             Divider()
-            Button("Open Recordings Folder") { model.openRecordingsFolder() }
+            Button("Show Exports Folder") { model.openRecordingsFolder() }
             SettingsLink { Text("Settings…") }
         } label: {
             Image(systemName: "chevron.down.circle.fill")
@@ -175,9 +175,11 @@ struct OptionsMenu: View {
     }
 }
 
-/// Right after a recording, in the bar's place: the same glass capsule.
-struct SavedToast: View {
+/// Right after a recording, in the bar's place: the same glass capsule,
+/// with the way into the Studio.
+struct RecordingReady: View {
     let url: URL
+    let edit: () -> Void
     let onDismiss: () -> Void
 
     var body: some View {
@@ -186,7 +188,7 @@ struct SavedToast: View {
                 .font(.title3)
                 .foregroundStyle(.green)
             VStack(alignment: .leading, spacing: 1) {
-                Text("Recording saved")
+                Text("Recording ready")
                     .font(.callout.weight(.semibold))
                 Text(url.deletingPathExtension().lastPathComponent)
                     .font(.caption)
@@ -195,11 +197,9 @@ struct SavedToast: View {
                     .truncationMode(.middle)
             }
             Spacer(minLength: 4)
-            Button("Show") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
-                .buttonStyle(.glass)
-                .help("Show in Finder")
-            Button("Play") { NSWorkspace.shared.open(url) }
-                .buttonStyle(.glass)
+            Button("Edit", action: edit)
+                .buttonStyle(.glassProminent)
+                .help("Open it in the Studio to trim, cut and export")
             Button(action: onDismiss) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title3)
@@ -207,7 +207,7 @@ struct SavedToast: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Back to the controls")
+            .help("Back to the controls; File › Edit Last Recording opens it later")
             .accessibilityLabel("Dismiss")
         }
         .controlSize(.small)

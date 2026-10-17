@@ -1,0 +1,14 @@
+# Stage with Stage Camera, the virtual camera Keynote, Zoom and Meet can
+# use, inside it. Signing the camera needs a team in the Apple Developer
+# Program, set as DEVELOPMENT_TEAM. Build with STAGE_CAMERA=1 ./scripts/build.sh.
+include:
+  - project.yml
+
+targets:
+  Stage:
+    dependencies:
+      - target: StageCamera
+        embed: true
+    entitlements:
+      properties:
+        com.apple.developer.system-extension.install: true

@@ -7,6 +7,8 @@ import CoreMediaIO
 final class CaptureEngine: NSObject, @unchecked Sendable {
     let session = AVCaptureSession()
     let events: AsyncStream<CaptureEvent>
+    /// The phone's picture for Stage Camera, when an app is watching it.
+    let virtualCamera = VirtualCameraFeed()
 
     private let continuation: AsyncStream<CaptureEvent>.Continuation
     private let queue = DispatchQueue(label: "com.fulltimestudio.stage.capture")
@@ -185,6 +187,7 @@ extension CaptureEngine: AVCaptureFileOutputRecordingDelegate {
 
 extension CaptureEngine: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        if let pixels = CMSampleBufferGetImageBuffer(sampleBuffer) { virtualCamera.send(pixels) }
         guard let format = CMSampleBufferGetFormatDescription(sampleBuffer) else { return }
         let size = CMVideoFormatDescriptionGetPresentationDimensions(format, usePixelAspectRatio: true, useCleanAperture: true)
         guard size != lastFrameSize, size.width > 0, size.height > 0 else { return }

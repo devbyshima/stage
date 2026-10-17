@@ -15,8 +15,8 @@ struct ControlsLane: View {
 
     var body: some View {
         ZStack {
-            if let saved = model.lastSaved, !model.recording.isActive {
-                SavedToast(url: saved) { model.lastSaved = nil }
+            if let recording = model.lastRecording, !model.recording.isActive {
+                RecordingReady(url: recording, edit: { model.openStudio(recording) }) { model.lastRecording = nil }
                     .transition(.opacity.combined(with: .scale(scale: 0.96)))
             } else {
                 ControlBar()
@@ -28,7 +28,7 @@ struct ControlsLane: View {
         .padding(.horizontal, 12)
         .padding(.top, ControlsPanel.gap)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .animation(.snappy, value: model.lastSaved)
+        .animation(.snappy, value: model.lastRecording)
     }
 }
 

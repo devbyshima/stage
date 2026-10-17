@@ -69,6 +69,36 @@ targets:
         NSCameraUsageDescription: Stage shows and records your iPhone screen. macOS treats a connected iPhone screen as a camera, so Stage needs camera access to see it.
         NSMicrophoneUsageDescription: Stage records your iPhone's sound, or your voice from a microphone you choose.
 
+  # Stage Camera, the virtual camera. Only project-camera.yml puts it in the
+  # app, since signing it needs a team in the Apple Developer Program.
+  StageCamera:
+    type: system-extension
+    platform: macOS
+    sources:
+      - path: StageCamera
+    entitlements:
+      path: StageCamera/StageCamera.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups:
+          - $(TeamIdentifierPrefix)com.fulltimestudio.stage.camera
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fulltimestudio.stage.camera
+        PRODUCT_NAME: com.fulltimestudio.stage.camera
+        ENABLE_HARDENED_RUNTIME: YES
+        SKIP_INSTALL: YES
+    info:
+      path: StageCamera/Info.plist
+      properties:
+        CFBundleDisplayName: Stage Camera
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSSystemExtensionUsageDescription: Stage Camera shows your iPhone's screen in apps that use cameras, such as Keynote, Zoom and Meet.
+        CMIOExtension:
+          CMIOExtensionMachServiceName: $(TeamIdentifierPrefix)com.fulltimestudio.stage.camera
+
   StageTests:
     type: bundle.unit-test
     platform: macOS

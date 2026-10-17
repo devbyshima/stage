@@ -5,6 +5,7 @@ import SwiftUI
 /// rests, so the window can be shared as is.
 struct StageView: View {
     @Environment(StageModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
     @State private var window: NSWindow?
     @State private var controls = ControlsState()
     @State private var panel: ControlsPanel?
@@ -36,8 +37,13 @@ struct StageView: View {
                 .accessibilityHidden(true)
         }
         .onChange(of: model.prefs.floatsOnTop) { updateWindowLevel() }
-        .onChange(of: model.lastSaved) { _, saved in
-            if saved != nil { noteActivity() }
+        .onChange(of: model.lastRecording) { _, recording in
+            if recording != nil { noteActivity() }
+        }
+        .onChange(of: model.studioRequest) { _, url in
+            guard let url else { return }
+            openWindow(id: StudioView.windowID, value: url)
+            model.studioRequest = nil
         }
         .task { await hideControlsWhenIdle() }
         .alert("Stage", isPresented: alertIsPresented) {
@@ -79,7 +85,7 @@ struct StageView: View {
             #if DEBUG
             if DebugLaunch.isDemo { continue }
             #endif
-            let delay: TimeInterval = model.lastSaved == nil ? 2.5 : 8
+            let delay: TimeInterval = model.lastRecording == nil ? 2.5 : 8
             let visible = !model.isLive
                 || controls.pointerOver
                 || model.recording == .starting
@@ -87,7 +93,7 @@ struct StageView: View {
             guard visible != controls.visible else { continue }
             controls.visible = visible
             if !visible {
-                model.lastSaved = nil
+                model.lastRecording = nil
                 if let window, window.isKeyWindow, window.frame.contains(NSEvent.mouseLocation) {
                     NSCursor.setHiddenUntilMouseMoves(true)
                 }

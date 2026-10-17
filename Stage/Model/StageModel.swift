@@ -25,8 +25,11 @@ final class StageModel {
     private(set) var isRunning = false
     private(set) var cameraAccess = AVCaptureDevice.authorizationStatus(for: .video)
     private(set) var recording = RecordingState.idle
-    /// The recording just finished, offered in a toast until the controls hide.
-    var lastSaved: URL?
+    /// The recording just finished, offered in the controls strip until they
+    /// hide, and by File › Edit Last Recording after.
+    var lastRecording: URL?
+    /// A recording to open in the Studio; the window that can open it does.
+    var studioRequest: URL?
     var alertMessage: String?
     private(set) var isDemo = false
 
@@ -37,7 +40,6 @@ final class StageModel {
     @ObservationIgnored private var configureTask: Task<Void, Never>?
     @ObservationIgnored private var appliedAudio: AudioChoice?
     @ObservationIgnored private var displayActivity: (any NSObjectProtocol)?
-    @ObservationIgnored private var askWhereToSaveCurrent = false
     @ObservationIgnored private var quitHandler: (() -> Void)?
 
     init() {
@@ -201,16 +203,15 @@ final class StageModel {
 
     func startRecording() {
         guard canRecord, let source = selectedSource else { return }
-        // When asking where to save, the file waits in a temporary folder until then.
-        askWhereToSaveCurrent = prefs.askWhereToSave
-        let folder = askWhereToSaveCurrent ? URL.temporaryDirectory : prefs.saveFolder
+        // Recordings wait in Stage's own folder for the Studio.
+        let folder = RecordingLibrary.folder
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         } catch {
-            alertMessage = "Stage can’t save recordings in “\(folder.path)”. Choose another folder in Settings."
+            alertMessage = "Stage can’t keep recordings in “\(folder.path)”. \(error.localizedDescription)"
             return
         }
-        lastSaved = nil
+        lastRecording = nil
         recording = .starting
         let url = RecordingName.unique(RecordingName.make(for: source.name, at: .now), in: folder)
         engine.startRecording(to: url, codec: prefs.videoFormat.codec)
@@ -235,49 +236,27 @@ final class StageModel {
             return
         }
         if let quitHandler {
-            if askWhereToSaveCurrent { _ = try? move(url, to: RecordingName.unique(url.lastPathComponent, in: prefs.saveFolder)) }
             quitHandler()
-        } else if askWhereToSaveCurrent {
-            askWhereToSave(url)
         } else {
-            lastSaved = url
+            lastRecording = url
         }
     }
 
-    private func askWhereToSave(_ url: URL) {
-        let panel = NSSavePanel()
-        panel.title = "Save Recording"
-        panel.nameFieldStringValue = url.lastPathComponent
-        panel.directoryURL = prefs.saveFolder
-        panel.allowedContentTypes = [.quickTimeMovie]
-        panel.canCreateDirectories = true
+    /// Asks the window to open `url` in the Studio.
+    func openStudio(_ url: URL) {
+        studioRequest = url
+    }
+
+    /// Any movie on the Mac, to trim or put in a mockup.
+    func chooseMovieForStudio() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.movie]
+        panel.directoryURL = RecordingLibrary.folder
         panel.begin { [weak self] response in
             MainActor.assumeIsolated {
-                self?.place(askedRecording: url, at: response == .OK ? panel.url : nil)
+                if response == .OK, let url = panel.url { self?.openStudio(url) }
             }
         }
-    }
-
-    /// Cancelling keeps the recording in the usual folder rather than losing it.
-    private func place(askedRecording url: URL, at destination: URL?) {
-        do {
-            lastSaved = try move(url, to: destination ?? RecordingName.unique(url.lastPathComponent, in: prefs.saveFolder),
-                                 replacing: destination != nil)
-        } catch {
-            alertMessage = "The recording couldn’t be moved. It is still at “\(url.path)”."
-        }
-    }
-
-    private func move(_ url: URL, to destination: URL, replacing: Bool = false) throws -> URL {
-        let files = FileManager.default
-        try files.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-        // The save panel already asked before replacing a file.
-        if replacing, files.fileExists(atPath: destination.path) {
-            _ = try files.replaceItemAt(destination, withItemAt: url)
-        } else {
-            try files.moveItem(at: url, to: destination)
-        }
-        return destination
     }
 
     func openRecordingsFolder() {
@@ -305,7 +284,7 @@ final class StageModel {
         isRunning = true
         switch state {
         case "recording": recording = .recording(since: .now.addingTimeInterval(-83))
-        case "saved": lastSaved = prefs.saveFolder.appending(path: RecordingName.make(for: phone.name, at: .now))
+        case "saved": lastRecording = RecordingLibrary.folder.appending(path: RecordingName.make(for: phone.name, at: .now))
         default: break
         }
     }

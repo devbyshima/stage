@@ -25,9 +25,6 @@ final class Preferences {
     var saveFolder: URL {
         didSet { save(saveFolder.path, Key.saveFolderPath) }
     }
-    var askWhereToSave: Bool {
-        didSet { save(askWhereToSave, Key.askWhereToSave) }
-    }
     var videoFormat: VideoFormat {
         didSet { save(videoFormat.rawValue, Key.videoFormat) }
     }
@@ -43,7 +40,6 @@ final class Preferences {
         audioChoice = AudioChoice(storedValue: defaults.string(forKey: Key.audioChoice))
         saveFolder = defaults.string(forKey: Key.saveFolderPath).map { URL(filePath: $0, directoryHint: .isDirectory) }
             ?? Self.defaultSaveFolder
-        askWhereToSave = defaults.bool(forKey: Key.askWhereToSave)
         videoFormat = defaults.string(forKey: Key.videoFormat).flatMap(VideoFormat.init(rawValue:)) ?? .h264
         preferredSourceID = defaults.string(forKey: Key.preferredSourceID)
         isLoaded = true
@@ -61,7 +57,6 @@ final class Preferences {
         static let monitorVolume = "monitorVolume"
         static let audioChoice = "audioChoice"
         static let saveFolderPath = "saveFolderPath"
-        static let askWhereToSave = "askWhereToSave"
         static let videoFormat = "videoFormat"
         static let preferredSourceID = "preferredSourceID"
     }

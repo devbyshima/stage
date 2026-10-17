@@ -19,7 +19,62 @@ Recordings are the phone's own video stream at its full native resolution.
 The window holds only that picture, edge to edge. The controls float on a
 Liquid Glass strip of their own just under the window, never over the picture,
 and fade away with nothing left behind; a meeting sharing the window never
-sees them. Recordings are saved to `~/Movies/Stage` as `<Device> 2026-10-15 at 15.03.12.mov`.
+sees them. Each recording is kept in Stage's library as
+`<Device> 2026-10-15 at 15.03.12.mov`; when it stops, **Edit** opens it in the
+Studio (⌘L does too, and **File › Recent Recordings** lists the last ten).
+
+## Studio
+
+The Studio edits a recording and exports a new file; the recording itself is
+never changed. Exports go to `~/Movies/Stage` unless you choose another folder
+in Settings.
+
+- **Cut**: split at the playhead (⌘B), select a piece and delete it, drag a
+  selected piece's yellow ends to trim, undo and redo (⌘Z, ⇧⌘Z). Space plays.
+- **Sound**: keep the recording's sound or leave it out.
+- **Mockup**: put the video on a 3D iPhone 18 Pro, 18 Pro Max or Duo Fold in
+  any of its finishes, or on a USDZ model of your own.
+  - **Shots**: twelve product-shoot framings (Front, Turn, Lean, Hero, Lying,
+    Corner, Landscape, Pair, Stack, Mirror, Trio, Float). Drag the preview to
+    turn and tilt the phones, scroll or pinch to size them, double-click to
+    put them back. Shots with more than one phone can use a second finish.
+  - **Motion**: the camera can push in, pull back, orbit, drift, rise, or
+    travel from the top of the screen to the bottom over the video.
+  - **Light**: Studio, Soft, Dramatic or Bright, brought round to any angle.
+  - **Lens**: depth of field, glow, grain, vignette, saturation and contrast.
+  - **Background**: the studio sweep, night, white, black, any colour,
+    gradient or image, or **Clear** for phones alone to lay over slides.
+  - **Templates**: save a setup and start the next mockup from it.
+- **Export** a video (H.264, HEVC or ProRes, 1080p or 4K; with a clear
+  background, HEVC with alpha or ProRes 4444), or the frame at the playhead
+  as a 5K PNG.
+
+A recording on its side turns to fill the screen, and starts on the
+Landscape shot. The fold opens wide, so an upright recording sits on it with
+bars at the sides.
+
+### The 3D iPhones
+
+Stage's own iPhones are USDZ files in `Stage/Resources/Mockups`, named
+`<model> - <finish>.usdz` (for example `iPhone 18 Pro - Silver.usdz`); add a
+file named that way and it joins the list. You can also use a USDZ model of
+your own: any works if its screen is a part of its own, which Stage finds by
+name or lets you choose.
+
+## Keynote and video calls: Stage Camera
+
+Stage Camera is a virtual camera with the phone's screen in it, for live
+demos inside Keynote (**Insert › Live Video**) or in Zoom, Meet and FaceTime.
+It is a system extension, and macOS only runs one signed by a team in the
+Apple Developer Program, so it's left out of builds by default:
+
+```bash
+STAGE_CAMERA=1 ./scripts/build.sh release
+```
+
+Put that Stage in Applications, choose **Install** under Settings › Virtual
+Camera, and allow it in System Settings. Stage feeds it while an app is using
+it.
 
 ### Presenting in a meeting
 
@@ -46,7 +101,7 @@ sees them. Recordings are saved to `~/Movies/Stage` as `<Device> 2026-10-15 at 1
 - **Record Sound From**: the phone, a microphone (to narrate), or no sound.
 - **Video format**: H.264 (plays everywhere), HEVC (smaller), or ProRes 422 HQ
   (near-lossless for editing, much larger files).
-- **When a recording stops**: save to the folder, or ask each time.
+- **Export to**: where the Studio's exports go.
 
 ## Build
 
@@ -85,14 +140,28 @@ and draws a fake phone. `-look light|dark` sets the appearance, and
 flag needs a value: a lone word is read as a file to open, and macOS then
 skips opening the window.
 
+The Studio has its own: `-studio <movie>` opens one, `-studioMockup <iPhone or
+file>`, `-studioShot <shot>`, `-studioMotion <motion>` and `-studioBackground
+clear` set the mockup up, and `-studioExport <file.mov>` or `-studioStill
+<file.png>` export it and quit. `-snapshotInspector <file.png>` saves the whole
+mockup inspector.
+
 ## How it works
 
 macOS hides iPhone screens from apps until one opts in through CoreMediaIO
 (`kCMIOHardwarePropertyAllowScreenCaptureDevices`), the same switch QuickTime
 uses. The phone then appears as an AVFoundation capture device carrying picture
 and sound. `CaptureEngine` runs one `AVCaptureSession` feeding the preview, an
-`AVCaptureMovieFileOutput` and a speaker monitor; a frame output only watches the
-picture size, so the window follows the phone when it rotates.
+`AVCaptureMovieFileOutput` and a speaker monitor; a frame output watches the
+picture size, so the window follows the phone when it rotates, and passes
+frames to Stage Camera when an app is watching it.
+
+The Studio keeps the kept pieces as time ranges and builds an
+`AVMutableComposition` from them for playback and export. Mockups are SceneKit
+scenes: each shot clones the model, the video plays on the screen's material
+as emitted light (so the studio light never greys it), and an export renders
+every frame at twice its size and scales it down before writing it with the
+sound.
 
 ## License
 
@@ -101,7 +170,8 @@ You may use, study and change it for any non-commercial purpose. Selling it, or 
 anything that earns money, is not allowed.
 
 The Stage name and icon are not covered by the license: a modified version must use its own
-name and icon.
+name and icon. Nor are the 3D iPhone models in `Stage/Resources/Mockups`, which are licensed
+separately.
 
 ## Credits
 

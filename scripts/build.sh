@@ -5,6 +5,9 @@
 #   ./scripts/build.sh            # Debug build in .build/main
 #   ./scripts/build.sh release    # Release build, copied to build/Stage.app
 #   ./scripts/build.sh test       # anything else goes to xcodebuild (default: build)
+#
+# STAGE_CAMERA=1 puts Stage Camera, the virtual camera, in the app. Signing
+# it needs a team in the Apple Developer Program.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -24,7 +27,9 @@ LOG="$DERIVED/build.log"
 ACTION=("$@")
 [ ${#ACTION[@]} -eq 0 ] && ACTION=(build)
 
-xcodegen generate --quiet || exit 1
+SPEC=project.yml
+[ "${STAGE_CAMERA:-0}" = 1 ] && SPEC=project-camera.yml
+xcodegen generate --quiet --spec "$SPEC" || exit 1
 
 xcodebuild -project Stage.xcodeproj -scheme Stage -configuration "$CONFIG" \
   -destination "platform=macOS,arch=arm64" -derivedDataPath "$DERIVED" \
